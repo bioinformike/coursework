@@ -1,0 +1,143 @@
+---
+title: "Homework_1_Lape"
+author: "Mike Lape"
+date: "August 31, 2017"
+output:
+  pdf_document: default
+  html_document: default
+  word_document: default
+---
+&nbsp;
+
+Load the LearnBayes library.
+```{r}
+library(LearnBayes)
+```
+
+&nbsp;
+
+1.	What is the size of the data? 
+```{r}
+# It has 657 rows (students) and 11 columns (variables).
+dim(studentdata)
+```
+
+&nbsp;
+
+2.	Show the top six rows of the data. 
+```{r}
+head(studentdata, 6)
+```
+
+&nbsp;
+
+3.	Pull out the complete data of Students 4, 22, 517, and 533.
+```{r}
+extract <- studentdata[c(4,22,517,533),]
+extract
+```
+
+&nbsp;
+
+4.	Using the documentation command, describe each variable in the data. 
+```{r,eval=FALSE}
+help(studentdata, package = "LearnBayes")
+```
+Variable | Description from Docs
+------------|------------------
+Student | Student Number
+Height | Height in Inches
+Gender | Gender
+Shoes | Number of Pairs of Shows Owned
+Number | Number Chosen Between 1 and 10
+DVDs | Name of Movie DVDs Owned
+ToSleep | Time the Person Went to Sleep the Previous Night (Hours Past Midnight)
+Haircut | Cost of Last Haircut Including Tip
+Job | Number of Hours Working on a Job per Week
+Drink | Usual Drink at Suppertime among Milk, Water, and Pop   
+
+&nbsp;
+
+5.	What is the nature of each variable? 
+```{r}
+sapply(studentdata, class)
+```
+
+&nbsp;
+
+6.	Show the summary statistics of each variable.  
+```{r}
+summary(studentdata)
+```
+
+&nbsp;
+
+7.	What is the gender distribution? 
+```{r}
+summary(studentdata$Gender)
+```
+
+&nbsp;
+
+8.	What is the most favorite number of the students?  
+```{r}
+# It is 7.
+# 191 students selected the number 7.
+table(studentdata$Number)
+```
+
+&nbsp;
+
+9.	What is the second most favorite number of the students? 
+```{r}
+# It is 5.
+# 78 students chose the number 5.
+table(studentdata$Number)
+```
+
+&nbsp;
+
+10.	What is the least favorite number of students? 
+```{r}
+# It is 10. 
+# Only 7 students selected the number 10.
+table(studentdata$Number)
+```
+
+&nbsp;
+
+
+11.	Use the 'table' command on 'studentdata$Shoes' and show the output. 
+```{r}
+table(studentdata$Shoes)
+```
+
+&nbsp;
+
+12.	What is unusual about the output in question 11?  
+
+Some students report having half pairs of shoes, this could indicate that they lost one of the shoes from that pair, although this is odd.  These students also report having a lot of pairs of shoes, some report 65 or 70 pairs or more.
+
+&nbsp;
+
+13.	Use the 'table' command on 'studentdata$Drink.'
+```{r}
+table(studentdata$Drink)
+```
+&nbsp;
+
+14.	Cross-tabulate 'Gender' and 'Drink.'
+```{r}
+gender_drink_cross <- table(studentdata$Gender, studentdata$Drink)
+gender_drink_cross
+```
+
+&nbsp;
+
+15.	Calculate proportions row-wise and column-wise as well correct to two decimal places. 
+```{r}
+# Row-Wise:
+round(prop.table(gender_drink_cross,1),2)
+# Column-Wise:
+round(prop.table(gender_drink_cross,2),2)
+```

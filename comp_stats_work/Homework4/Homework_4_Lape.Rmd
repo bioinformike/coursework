@@ -1,0 +1,180 @@
+---
+title: "Homework_4_Lape"
+author: "Mike Lape"
+date: "October 26, 2017"
+output:
+  word_document: default
+---
+&nbsp;
+
+1.	Create function to estimate size of rhombus, based on surrounding sqaure.
+```{r, fig.width=8, fig.height=8}
+
+library(ggplot2)
+
+# Long Diag = 4
+# Short Diag = 2
+SHORT = 2
+LONG = 4
+
+# Define R as long diag / 2
+R = 4/2
+
+rhom_area <- function(n)
+{
+  # Think of rhombus in square
+  # Get the area of the square, and multiply by fraction of points that
+  # fall within rhombus from all points that fall into square.
+
+    
+  # Generate our x,y df between -2 and 2 to cover square surrounding
+  # this rhombus.  Generate rows equal to the handed in sample size, n.
+  df = data.frame(x = runif(n, -2, 2), y = runif(n, -2, 2))
+  
+  # Determine if a point falls within rhombus
+  # (2 * abs(df$x) + 1 * abs(df$y)) < R
+  # 
+  # Sum up the number of points in our df that fall within rhombus
+  # sum(2*abs(df$x) + 1*abs(df$y) < R))
+  #
+  # Divide by n to get the ratio of points within rhombus to total points,
+  # which is our ratio to transform area of square to area of rhombus.
+  thetaHat = ((sum(2*abs(df$x) + 1*abs(df$y) < R)) / n)
+  
+  # Calculate that area
+  areaHat = thetaHat * (2 * SHORT)^2
+  
+  return(list(areaHat = areaHat, N = n))
+}
+```
+
+&nbsp;
+
+2. Apply your rhom_area to 1:10000 and plot the results.
+```{r, fig.width=8, fig.height=8}
+# Run 10,000 simulations and plot the calculated area against the value of n
+# to show the convergence on a true area of this rhombus.
+#
+# Comments:
+#     When running this simulation 10k time and then plotting these results it
+#     does indeed appear to converge upon the true area defined as:
+#     (short leg * long leg) / 2
+#     in this case:
+#     (2 * 4) / 2 = 4
+#
+
+out = sapply(1:10000, rhom_area)
+trueArea = (LONG * SHORT) / 2
+
+p1 = ggplot(data = data.frame(area = unlist(out[1,]), n = unlist(out[2,])),
+            aes(x = n, y = area)) + ggtitle("Convergence Upon True Area of Rhombus") +
+            geom_point() + geom_hline(yintercept = trueArea, size=2, color = "red")
+p1
+```
+
+&nbsp;
+
+3. Write function that generates points inside the rhombus
+```{r, fig.width=8, fig.height=8}
+# This function will return a uniform distribution of points that
+# fall inside the rhombus as pictured above in problem 1.
+# The default n is 1, meaning it will return 1 x,y pair in 
+# a dataframe that falls inside the rhombus, but you can
+# pass it the number of pairs of x,y values you want and
+# it will generate that many value pairs, and hand them back
+# in a dataframe.
+in_rhom <- function(n = 1)
+{
+  arr.x = rep(NA, n)
+  arr.y = rep(NA, n)
+  i = 0
+  while(i < n)
+  {
+    x = runif(1, -2, 2)
+    y = runif(1, -2, 2)
+    
+    if(((2 * abs(x)) + 1 * abs(y)) < R)
+    {
+      i = i + 1
+      arr.x[i] = x
+      arr.y[i] = y
+    }
+  }
+  
+  return(data.frame(x = arr.x, y = arr.y))
+} 
+```
+
+4. Use rejection sampling to generate 1000 samples from the distribution below.
+```{r, fig.width=8, fig.height=8}
+# Distribution function provided
+f <- function(x)
+{
+  dbeta(x, shape1 = 2, shape2 = 5)
+}
+
+# Simple distribution function
+g <- function(x)
+{
+  dunif(x, 0.00, 1.00)
+}
+
+ratio.f.g = function(x)
+{
+  f(x)/g(x)
+}
+
+M = optimize(ratio.f.g, c(0,1), maximum = TRUE)
+M = M$objective
+
+genSamples <- function(n = 1000)
+{
+  # Create our sample vector and fill with NAs
+  my.sample = rep(NA, n)
+  
+  i = 0
+  j = 0
+  while(i < n)
+  {
+    # Generate 1 value between 0 and 1
+    y = runif(1, 0, 1)
+    p = f(y) / ( M * g(y))
+    accept = sample(c(TRUE,FALSE), 1, prob = c(p, 1-p))
+    
+    if(accept)
+    {
+      # Accepted number, add to vector
+      my.sample[i+1] = y
+      i = i + 1
+    }
+    else
+    {
+      j = j +1
+    }
+    
+  }
+  
+  return(my.sample)
+}
+genSamples(1000)
+
+```
+
+5.  I used a simple proposal function of just dunif(x, 0.00, 1.00).  Running this
+    function a few times with an n of 1,000, meaning we need to run this enough
+    times to get 1000 accepted values, also produced ~1440 rejected values. So, the 
+    acceptance ratio of this algorithm was was 0.694, or 69.4%
+    
+6.  Create a histogram with relative frequencies for your sample and add the true density curve to your histogram. 
+
+```{r, fig.width=8, fig.height=8}
+# Generate our samples
+tmp = genSamples(1000)
+# Create histogram
+hist(tmp, freq = F, col = "grey", breaks = 100, xlim = c(0,1), main = "Histogram of Samples",
+     ylab = "Density", xlab = "Samples")
+curve(f(x),0, 1, add =T, col = "red")
+
+
+
+```

@@ -1,0 +1,201 @@
+---
+title: "Homework_2_Lape"
+author: "Mike Lape"
+date: "September 16, 2017"
+output:
+  word_document: default
+  html_document: default
+---
+&nbsp;
+
+1.	What is the size of the data? 
+```{r}
+# It has 50 rows (states) and 4 columns (variables).
+dim(USArrests)
+```
+
+&nbsp;
+
+2.	Describe the data.
+```{r, eval=FALSE}
+# USArrests is a data frame that contains a row for each state in the US 
+# and 3 columns for rates of different types of crimes (murder, assault, and rape) 
+# measured per 100,000 residents, and a column for the percent urban population.
+help("USArrests")
+```
+
+&nbsp;
+
+3.	Show the top nine rows of the data.  
+```{r}
+head(USArrests, 9)
+
+```
+
+&nbsp;
+
+4.	Write a function that calculates and returns length, mean and standard deviation of a vector.  
+```{r}
+# getStats takes a vector input and returns the length, mean, and standard deviation in a vector.
+getStats = function(input)
+{
+  m = mean(input)
+  n = length(input)
+  d = sd(input)
+  return(c(length = n, mean = m,standard_dev = d))
+}
+
+```
+
+&nbsp;
+
+5.	Does you function deal with missing values?  
+```{r}
+# The function getStats does not deal with missing values.  The function outputs NAs when it runs into them.
+```
+
+&nbsp;
+
+6.	How can you modify it so that missing values are ignored?  
+```{r}
+# I can utilize the na.omit() function to have the rows with NA stripped out for calculations.
+getStatsSafe = function(input)
+{
+  clean = na.omit(input)
+  m = mean(clean)
+  n = length(clean)
+  d = sd(clean)
+  return(c(length = n, mean = m,standard_dev = d))
+  
+}
+```
+
+&nbsp;
+
+7.	Apply the function from 6 to each column of the USArrests data.  Report the means and standard deviations.
+```{r}
+# Get the data
+out =  apply(USArrests, 2, FUN = getStatsSafe)
+
+# Now output the mean and standard deviation info that was requesed.
+out[c("mean", "standard_dev"),]
+```
+
+&nbsp;
+
+8.	Generate a random sample from a normal distribution with characteristics similar to the murder column in USArrests data (same size, same mean, same sd). 
+```{r}
+# Use set.seed() so this is reproducible.
+set.seed(100)
+
+# Generate our needed data
+out = getStatsSafe(USArrests$Murder)
+
+# Parse output for more readability
+len = out["length"]
+mean = out["mean"]
+stdev = out["standard_dev"]
+
+# Generate our random sample from normal distribution
+sam = rnorm(len, mean = mean, sd = stdev)
+sam
+```
+
+&nbsp;
+
+9.	Create two histograms - for the simulated and the original murder data. Use par(mfrow = c(2,1)) command to plot two histograms in one window. Do the histograms look similar?	  
+```{r}
+# These 2 histograms do not look that similar.  They both have similar ranges, but my random sample has a normal distrubtion (that was how it was generated), whereas the murder data does not appear to be normally distributed.
+par(mfrow = c(2,1))
+hist(sam)
+hist(USArrests$Murder)
+```
+
+&nbsp;
+
+10.	Create a new column called MurderRatio - the ratio of murder to urban population percent. Use with() or within() functions.	
+```{r}
+out = within(USArrests, {MurderRatio = Murder / UrbanPop} )
+head(out)
+```
+
+&nbsp;
+
+11.	Define a new variable called MurderGroup as follows - if MurderRatio is higher than 0.25, the state is considered "High", if MurderRatio is between 0.05 and 0.25, the state is considered "Medium", and the state is "Low" otherwise.	
+```{r}
+out$MurderGroup = ifelse(out$MurderRatio > 0.25, "High", "Medium")
+out$MurderGroup = ifelse(out$MurderRatio < 0.05, "Low", out$MurderGroup)
+head(out)
+```
+
+&nbsp;
+
+12.	What percent of the states is in High, Low, Medium groups? 	
+```{r}
+# 8% of states are in the High group, 72% in the medium group, and 20% in the low group.
+prop.table(table(out$MurderGroup)) * 100
+```
+
+&nbsp;
+
+13.	Generate a random sample from the set of labels c("High", "Low", "Medium") with probabilities from Question 12. Use the documentation command to learn how to specify the probabilities of selection. What percent of the states are in High, Low, and Medium groups in simulated data? Why are these percentages not equal to percentages in 11?	
+```{r, eval= FALSE}
+?sample
+```
+```{r}
+# Probablity is vector of weights, so we will use .08 (high), 0.20 (low), 0.72 (Medium), which we generated in problem 12.
+sam = sample(c("High", "Low", "Medium"), size = 50, replace = TRUE, prob = c(.08, .20, .72) )
+
+# Now make the prop table to generate percents
+prop.table(table(sam)) * 100
+
+# I believe the percentages are not equal because I set the sample parameter replace to TRUE.
+```
+
+
+&nbsp;
+
+14.	Summarize all variables in the USArrests data by MurderGroup by group means? Do you see a pattern in different crime counts by groups?	
+```{r}
+# High MurderGroup states also have the highest Assault numbers and 2nd highest rape numbers.  However, they have a lower Urban Pop than Low and Medium groups.  There seems to be a sweet spot in terms of urban population between the lower end (~50%) for the high murdergroup, and the higher end (~68%) for the medium murdergroup.  The low murdergroup sits inbetween these two Urban population percentages and has lower numbers of all 3 crimes.
+aggregate(USArrests, by = list(out$MurderGroup), FUN = mean)
+```
+
+&nbsp;
+
+15.	Results of 100 coin toss experiments are recorded as follows: 0 = "Tail", 1 = "Head". The output, X, is a string of 0's and 1 of length 100. Then, the number of times when we see 1-0-0 in X is calculated and equal to 21.  (Example: if X = c(0001001110100), 1-0-0 occurs 2 times).  Do you believe that this is a fair coin (probability of 1 = 0.5)? Justify your answer.	
+```{r}
+# Write a function for this so we can do it many times.
+# Generate 100 fair coin flips
+flip = function()
+{
+  sides <- c(1,0) # 1 = HEAD, 0 = TAIL
+  coins <- sample(sides, 100, replace= TRUE, p = c(0.5,0.5))
+
+  # Make coins one long string for easier analysis
+  coins = paste(coins, collapse = "")
+  
+  # Mark our matches (100)
+  coins = gsub("100", "X", coins)
+  
+  # Count number of hits in the string, for our total number of times hitting the 
+  #pattern 100.
+  return(stringr::str_count(coins, "X"))
+}
+
+# Simulate 10000 separate 100 coin flips
+input = numeric()
+for ( i in 1:10000)
+{
+ 
+  input <- append(input, flip())
+}
+
+# Use my stats function from earlier in this homework to get mean and std dev.
+getStats(input)
+
+# It looks like the mean is ~ 12 and a standard deviation of 2.  So a coin coming up 1-0-0 
+# 21 times when flipped 100 times does not appear to be a fair.
+```
+
+&nbsp;

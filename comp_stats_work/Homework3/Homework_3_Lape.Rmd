@@ -1,0 +1,199 @@
+---
+title: "Homework_3_Lape"
+author: "Mike Lape"
+date: "October 12, 2017"
+output:
+  word_document: default
+---
+&nbsp;
+
+1.	Recreate the following...4 histograms in 1 plot.
+```{r, fig.width=8, fig.height=8}
+# Load in the data
+mix = read.table('data_mixmodel.txt')
+
+# subset our data by state
+state_1 = subset(mix, mix$state %in% '1')
+state_2 = subset(mix, mix$state %in% '2')
+state_3 = subset(mix, mix$state %in% '3')
+state_4 = subset(mix, mix$state %in% '4')
+
+# Set up our page for 2 rows and 2 columns of graphs.
+par(mfrow = c(2,2))
+
+# histogram for each state and add density line
+hist(state_1$y,  probability = TRUE, xlab = "Y", main = "State 1")
+lines(density(state_1$y), col = 'Red')
+
+hist(state_2$y,  probability = TRUE, xlab = "Y", main = "State 2")
+lines(density(state_2$y), col = 'Red')
+
+hist(state_3$y,  probability = TRUE, xlab = "Y", main = "State 3")
+lines(density(state_3$y), col = 'Red')
+
+hist(state_4$y,  probability = TRUE, xlab = "Y", main = "State 4")
+lines(density(state_4$y), col = 'Red')
+
+```
+
+&nbsp;
+
+2.	Recreate the following...4 scatter in 1 plot.
+```{r, fig.width=8, fig.height=8}
+# We use abline instead of lines, as abline can handle the direct output of 
+# lm without any extra operations required.
+
+# Set up our page for 2 rows and 2 columns of graphs.
+par(mfrow = c(2,2))
+
+# scatterplot for each state and add regression line.
+plot(state_1$x, state_1$y, xlab = "X", ylab = "Y", main = "State 1")
+abline(lm(y ~ x, data = state_1), col = "red", lty = "dashed")
+
+plot(state_2$x, state_2$y, xlab = "X", ylab = "Y", main = "State 2")
+abline(lm(y ~ x, data = state_2), col = "red", lty = "dashed")
+
+plot(state_3$x, state_3$y, xlab = "X", ylab = "Y", main = "State 3")
+abline(lm(y ~ x, data = state_3), col = "red", lty = "dashed")
+
+plot(state_4$x, state_4$y, xlab = "X", ylab = "Y", main = "State 4")
+abline(lm(y ~ x, data = state_4), col = "red", lty = "dashed")
+
+```
+
+&nbsp;
+
+
+3.	Recreate the following...4 dashed lines (regressions) in 1 big plot.
+```{r,fig.width=8, fig.height=8}
+# type = "n" for the plot function will cause nothing to be plotted.  
+# This is useful in this exercise because we will use text to label the points
+# but running this plot command is still necessary to give us a plot.
+
+# Create blank plot, sized for all values in full dataset.
+# Use type = 'n' to not plot anything.
+plot(mix$x, mix$y, xlab = "X", ylab = "Y", type="n")
+
+# Plot the values using the state number as point, and set the color
+# then slap a dashed linear regression on plot
+text(state_1$x, state_1$y, state_1$state, col = "black")
+abline(lm(y ~ x, data = state_1), col = "black", lty = "dashed")
+
+text(state_2$x, state_2$y, state_2$state, col = "red")
+abline(lm(y ~ x, data = state_2), col = "red", lty = "dashed")
+
+text(state_3$x, state_3$y, state_3$state, col = "green")
+abline(lm(y ~ x, data = state_3), col = "green", lty = "dashed")
+
+text(state_4$x, state_4$y, state_4$state, col = "blue")
+abline(lm(y ~ x, data = state_4), col = "blue", lty = "dashed")
+
+# Add Legend
+legend("topleft", c("state 1", "state 2", "state 3", "state 4"), 
+       col = c("black", "red", "green", "blue"), lty = "dashed")
+
+```
+
+&nbsp;
+
+
+4.	Create a scatter plot with CPI on the x axis and HDI on the y axis.
+```{r}
+library(ggplot2)
+# Pull in the data
+econ = read.csv("EconomistData.csv")
+p4 <- ggplot(econ, aes(x=CPI, y=HDI)) + geom_point()
+p4
+
+```
+
+&nbsp;
+
+
+5.	Make the points red.
+```{r}
+p5 <- p4 + geom_point(color = "red")
+p5
+
+
+```
+
+&nbsp;
+
+6.	Map the color of the points to Region.
+```{r}
+p6 <- p5 + geom_point(aes(color = Region))
+p6
+
+```
+
+&nbsp;
+
+7.	Make the points bigger by setting size to 2.
+```{r}
+p7 <- p6 + geom_point(aes(color = Region, size = 2))
+p7
+
+```
+
+&nbsp;
+
+8.	Map the size of the points to HDI.Rank 
+```{r}
+p8 <- p7 + geom_point(aes(color = Region, size = HDI.Rank ))
+p8
+```
+
+&nbsp;
+
+9.	Add a layer with a smoothing line on top of the scatter plot in 8.What is the default method used to calculate the smoothing line in ggplot?
+```{r}
+# The default smoothing method in ggplot depends on the size of the dataset
+# For datasets with n < 1000 the default is loess.
+# For datasets with n >= 1000 the default is gam.
+# So for our dataset with an n of 173, the default should be loess.
+p9 <- p8 +  geom_smooth()
+p9
+
+```
+
+&nbsp;
+
+10.	Change the default method in 8 to "loess". Do you see a difference? 
+```{r}
+# The default method for our dataset should be loess already, so as
+# expected I see no differences when explicitly specifying loess as the
+# smoothing method
+p10 <- p9 +  geom_smooth(method = "loess")
+p10
+
+```
+
+10 (cont). Change the degree of smoothness in loess to make the lines more smooth, then, change it to make it less smooth (use ?loess to find the parameter that controls the smoothness). 
+```{r}
+# Span is the parameter we want.  It defults to 0.75, so lets try super high, 0.95
+# This is very smooth.
+p11 <- p8 +  geom_smooth(method = "loess", span = 0.95)
+p11
+```
+
+```{r}
+# ...and let's set span very low which should make the line not smooth anymore.
+p12 <- p8 +  geom_smooth(method = "loess", span = 0.2)
+p12
+
+```
+
+10 (cont).How would you decide whether to use more smooth/less smooth line in data analysis (if we didn't have "auto" option)? Explain (5 points).
+```{r}
+# There are 2 different ways to do this.  The first is the easier and more intuitive
+# method which simply involves doing multiple loess smoothings and deciding visually
+# which one best represents your data.  The more scientific approach would be to use 
+# statistical methods to determine the best span value.  While researching the answer to this 
+# question I found that apparently there is an R package that will automatically determine
+# the proper span value using statistical methods. (https://www.r-bloggers.com/automated-parameter-selection-for-loess-regression)
+
+```
+
+&nbsp;
+

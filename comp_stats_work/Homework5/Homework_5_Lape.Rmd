@@ -1,0 +1,166 @@
+---
+title: "Homework_5_Lape"
+author: "Mike Lape"
+date: "November 9, 2017"
+output:
+  word_document: default
+---
+&nbsp;
+
+1.	Why confidence intervals for unknown parameters are more meaningful in Bayesian inference compared to confidence intervals in traditional inference? 
+```{r, fig.width=8, fig.height=8}
+# Confidence intervals for unknown parameters are more meaningful in Bayesian 
+# inference compared to those in traditional inference because the CI in 
+# Bayesian inference takes into account prior information,the prior 
+# distribution, whereas the traditional CI is based only on the data.
+```
+
+&nbsp;
+
+2. Assuming that x are our data, we will fit a statistical model to x. Will a normal model with mean Î¼ and standard deviation Ï be appropriate for x? Why? 
+```{r, fig.width=8, fig.height=8}
+# A normal model does seem appropriate as the values seem continuous, however
+# a poisson model might also be good as this also looks like count data.
+x = c( 2, 2, 3, 1, 3, 3, 4, 2, 3, 1, 3, 5, 2, 2, 4, 4, 2, 2, 2, 4, 3, 4, 3, 4, 2, 1, 4, 5, 3, 2, 3, 6, 2, 6, 4, 5, 1, 3, 8, 1, 2, 5, 4, 5, 3, 3, 4, 5, 2, 2, 2, 1, 2, 2, 3, 2, 1, 2, 3, 2, 3, 3, 6, 4, 3, 2, 3, 3, 2, 4, 2, 2, 3, 7, 4, 3, 5, 4, 5, 1, 3, 3, 6, 7, 0, 3, 4, 2, 2, 4, 5, 2, 2, 3, 5, 2, 3, 1, 0, 4)
+```
+
+&nbsp;
+
+
+3. We will fit a Poisson model to x in Question 2. Write a function that evaluates the likelihood function (on log scale) for parameter Î» given the data x.
+```{r, fig.width=8, fig.height=8}
+loglike_poiss = function(lam)
+{
+  sum(dpois(x,lambda = lam, log = TRUE))
+}
+
+# What is the value of the likelihood function at Î»=1 (on log scale)? 
+loglike_poiss(1)
+
+# Apply the likelihood function to values of Î» in seq(0,10, by = 0.1)
+plot(seq(0,10, by = 0.1), unlist(lapply(seq(0,10, by = 0.1), loglike_poiss)), type = "l")
+
+```
+
+&nbsp;
+
+4. Letâs assume that the unknown Î» could be any real number between 0 and 10. What prior distribution would be appropriate for Î» in this case?
+```{r, fig.width=8, fig.height=8}
+# A discrete uniform distribution or normal distribution seems like it could
+# be appropriate as the prior distribution.
+```
+
+&nbsp;
+
+5. 	Letâs assume that we have additional information that Î» is around 8 with a margin of error equal to 1. Incorporating this information into a prior distribution, we will assume that the unknown Î» has a normal prior distribution with mean = 8 and sd = 2.
+
+Write a function that evaluates the prior distribution (on log scale) for parameter Î»
+```{r, fig.width=8, fig.height=8}
+
+log_prior_normal = function(mu = 8, sigma = 2)
+{
+  # Using params from lectures.
+  mu_prior = dnorm(mu, mean = 0, sd = 5, log = TRUE)
+  sigma_prior = dunif(sigma, min = 0, max = 30, log = TRUE)
+  return(mu_prior + sigma_prior)
+}
+log_prior_normal(8,2)
+ 
+# Apply the prior distribution to values of Î» in seq(0,10, by = 0.1) and 
+# create a plot.
+plot(seq(0,10, by = 0.1), unlist(lapply(seq(0,10, by = 0.1), log_prior_normal)), type = "l")
+
+```
+
+&nbsp;
+
+6. Using the prior distribution in Question 5, write a function to evaluate the posterior distribution (on log scale) for any parameter value Î» given the data x. 
+```{r, fig.width=8, fig.height=8}
+log_post = function(lam)
+{
+  return(loglike_poiss(lam) + log_prior_normal())
+}
+
+```
+
+
+&nbsp;
+
+7. Write a Metropolis-Hastings algorithm to generate an MCMC sample of Î» from the posterior distribution in Question 6. Size of your sample should be 10000. 
+```{r, fig.width=8, fig.height=8}
+proposalFunctionPoiss <- function(theta.old)
+{
+   	 max(rnorm(1, mean = theta.old, sd= c(1)),0)
+}
+
+mcmc <- function(start = 0, iters = 10000)
+{
+  N = iters
+  sample = rep(NA, N)
+  old = start
+
+  for(i in 1:N)
+  {
+    new = proposalFunctionPoiss(old)
+    p = exp(log_post(new) - log_post(old))
+    sample[i] = ifelse(runif(1) < p, new, old) 
+    old = sample[i]
+  }
+  
+  return(sample)
+}
+
+
+
+```
+
+&nbsp;
+
+8.	Obtain a histogram of your sample. Use the following to obtain an estimate and a 95% credibility interval for the unknown parameter. 
+```{r, fig.width=8, fig.height=8}
+
+set.seed(100)
+chain = mcmc(1, 10000)
+hist(chain)
+
+median(chain)
+quantile(chain, prob = c(0.025, 0.975))
+
+```
+
+&nbsp;
+
+9.	Using the functions available at (URL), calculate the effective sample size for your sample and plot how Monte Carlo estimates change with increase in sample size. What can you say about the quality of your sample?
+```{r, fig.width=8, fig.height=8}
+source("http://www.stat.psu.edu/~mharan/batchmeans.R")
+
+ess(chain)
+estvssamp(chain)
+
+# From the plot we can see after about ~2000 samples the MC estimates
+# plateau.  This indicates that this sample is of good quality.
+
+
+```
+
+&nbsp;
+
+10.Generate an MCMC sample of λ from the posterior distribution in Question 6 using WinBugs. Size of your sample should again be equal to 10000. Report your WinBugs code. Note also that your prior should be restricted to positive numbers, as in Question 7.
+
+```{r, fig.width=8, fig.height=8, eval = FALSE}
+From WinBUGS:
+
+# model
+model{
+	for (i in 1:n) {
+		x[i] ~ dpois(lam)
+	}
+	
+	lam ~ dnorm(8,2)
+}
+
+# data
+list(n = 100, x = c(2, 2, 3, 1, 3, 3, 4, 2, 3, 1, 3, 5, 2, 2, 4, 4, 2, 2, 2, 4, 3, 4, 3, 4, 2, 1, 4, 5, 3, 2, 3, 6, 2, 6, 4, 5, 1, 3, 8, 1, 2, 5, 4, 5, 3, 3, 4, 5, 2, 2, 2, 1, 2, 2, 3, 2, 1, 2, 3, 2, 3, 3, 6, 4, 3, 2, 3, 3, 2, 4, 2, 2, 3, 7, 4, 3, 5, 4, 5, 1, 3, 3, 6, 7, 0, 3, 4, 2, 2, 4, 5, 2, 2, 3, 5, 2, 3, 1, 0, 4))
+
+# initial
+list(lam = 1)

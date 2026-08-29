@@ -1,0 +1,308 @@
+---
+title: "Homework_6_Lape"
+author: "Mike Lape"
+date: "November 28, 2017"
+output:
+  word_document: default
+---
+&nbsp;
+
+1. Find the bootstrap MSE and Margin of Error for the mean of the data (3 points).
+```{r, fig.width=8, fig.height=8}
+x = scan("rabbitblood.txt")
+n = length(x)
+boot = sample(x, n, replace = TRUE)
+
+rep = 100000
+
+thetahat = mean(x)
+thetahatboot = rep(0,rep)
+
+# Run the bootstrap rep times and store mean in i of thetahatboot
+for(i in 1:rep)
+{
+  boot = sample(x, n, replace=TRUE); 
+  thetahatboot[i] = mean(boot) 
+}
+
+# Calculate MSE
+MSE = sum((thetahatboot - thetahat)^2) / rep
+cat(paste0("\nMSE: ", round(MSE, 2)))
+
+# Margin of Error is just 2 * Sqrt(MSE)
+MoE = 2 * sqrt(MSE)
+cat(paste0("\nMoE: ", round(MoE, 2)))
+```
+
+&nbsp;
+
+2.	Write a function similar to BootstrapMSEmean to find the bootstrap bias for the mean of the data
+```{r, fig.width=8, fig.height=8}
+boot_bias = function(x, reps)
+{
+  n = length(x)
+  
+  # True Value
+  thetahat = mean(x)
+  thetahatboot = rep(0, reps)
+  
+  for(i in 1:reps)
+  {
+    boot = sample(x, n, replace=TRUE)
+    thetahatboot[i] = mean(boot) 
+  }
+  
+  bias = mean(thetahatboot) - thetahat
+  cat(paste0("\nBias: ", round(bias, 2)))
+}
+
+# Call our function, which will handle the printing.
+boot_bias(x, 1000)
+
+```
+
+&nbsp;
+
+
+3.	Write a function similar to BootstrapMSEmean to find the MSE and Margin of Error for the median. (For a vector a, its median can be obtained by the command median(a)) .
+```{r, fig.width=8, fig.height=8}
+boot_med = function(x, reps)
+{
+  n = length(x)
+  
+  # True Value
+  thetahat = median(x)
+  thetahatboot = rep(0, reps)
+  
+  for(i in 1:reps)
+  {
+    boot = sample(x, n, replace=TRUE)
+    thetahatboot[i] = median(boot) 
+  }
+  
+  
+  # Calculate and print MSE
+  MSE = sum((thetahatboot - thetahat)^2) / rep
+  cat(paste0("\nMSE: ", round(MSE, 2)))
+  
+  # Margin of Error is just 2 * Sqrt(MSE)
+  MoE = 2 * sqrt(MSE)
+  cat(paste0("\nMoE: ", round(MoE, 2)))
+}
+# Call our function, which will handle the printing.
+boot_med(x, 1000)
+
+```
+
+&nbsp;
+4. Find the 90% bootstrap confidence interval for μ, the population mean
+```{r, fig.width=8, fig.height=8}
+reps = 10000
+
+# Mean and Std Dev for actual X
+meanx = mean(x)
+sdx = sd(x)
+
+n = length(x)
+var = rep(0,reps)
+
+for(i in 1:reps)
+{
+  # Run the bootstrap and calculate boot mean and std dev
+  boot = sample(x, n, replace=TRUE) 
+  boot_mean = mean(boot)
+  boot_sd = sd(boot)
+  
+  # Calculate the variance and shove it in array        
+  var[i] = (boot_mean - meanx) / (boot_sd / sqrt(n))
+}
+
+alpha = .1
+lower = quantile(var, alpha/2)
+upper = quantile(var, 1-alpha/2)
+
+left = meanx - upper*sdx / sqrt(n)
+right= meanx - lower*sdx / sqrt(n)
+c(left,right)
+
+```
+
+&nbsp;
+
+5. 	Find the 95% bootstrap confidence interval for σ^2, the population variance
+```{r, fig.width=8, fig.height=8}
+# Similar to #4 just swapping out mean and swapping in variance
+reps = 10000
+
+# Mean and Std Dev for actual X
+meanx = mean(x)
+sdx = sd(x)
+
+n = length(x)
+var = rep(0,reps)
+
+for(i in 1:reps)
+{
+  # Run the bootstrap and calculate boot mean and std dev
+  boot = sample(x, n, replace=TRUE) 
+  boot_mean = mean(boot)
+  boot_sd = sd(boot)
+  
+  # Calculate the variance and shove it in array        
+  var[i] = ( (n - 1) * (boot_sd)^2)/(sdx)^2
+}
+
+alpha = .05
+lower = quantile(var, alpha/2)
+upper = quantile(var, 1-alpha/2)
+
+left = (n - 1)*sdx^2 /upper
+right = (n - 1)*sdx^2 /lower
+c(left,right)
+
+```
+
+&nbsp;
+
+6. Find the 95% bootstrap confidence interval for ρ, the population correlation between x and y 
+```{r, fig.width=8, fig.height=8}
+y = read.table("height.txt")$V1
+x = read.table("height.txt")$V2
+
+n = length(x)
+m = length(y)
+
+# Grab indices for bootstrap then put values in correct vector
+boot_index = sample(1:n, n, replace=TRUE)
+xboot = x[boot_index]         
+yboot = y[boot_index]         
+
+
+reps = 1000
+
+thetahat = cor(x,y)
+thetahatboot = rep(0,reps)
+
+for(i in 1:reps)
+{
+  
+  # Grab indices for bootstrap then put values in correct vector
+  boot_index=sample(1:n, n, replace=TRUE)
+  xboot = x[boot_index]        
+  yboot = y[boot_index]     
+    
+  if((var(xboot)!=0)&(var(yboot)!=0))
+  {
+    thetahatboot[i]=cor(xboot, yboot)#sample corr for bootstrap sample
+  }
+}
+
+quantile(thetahatboot, prob = c(0.025, 0.975), na.rm = TRUE)
+```
+
+
+&nbsp;
+
+7. Assume normality. Find a 90% confidence interval for β_1
+```{r, fig.width=8, fig.height=8}
+fit = lm(y~x)
+
+alpha = 0.1
+e = fit$residuals
+sx = sd(x)
+n = length(x)
+SE = sqrt(sum(e^2)/((n-2)*(n-1)*(sx^2)))
+left = fit$coef[2]-SE*qt(1-alpha/2,n-2)
+right = fit$coef[2]-SE*qt(alpha/2,n-2)
+c(left,right)
+
+
+```
+
+&nbsp;
+8.	Describe the difference between Methods 1 and 2 for bootstrap for regression. 
+```{r, fig.width=8, fig.height=8}
+# Method 1 is used for x,y pairs where both the x and y are random.    
+# Method 2 is used for when just the y is random, and the x is not.
+```
+
+&nbsp;
+
+9.	Obtain the estimates β ^_0 and β ^_1 
+```{r, fig.width=8, fig.height=8}
+
+fit = lm(y ~ x)
+fit$coef[2]
+
+reps = 1000
+
+
+b0 = rep(0, reps)
+b1 = rep(0, reps)
+
+for(i in 1:reps)
+{
+  boot_index=sample(1:n, n, replace=TRUE)
+  xboot = x[boot_index]        
+  yboot = y[boot_index]     
+  
+  # Store the 
+  fit_boot = lm(yboot ~ xboot)
+  b0[i] = fit_boot$coef[1]
+  b1[i] = fit_boot$coef[2]
+    
+}
+
+est_b_0 = mean(b0)
+est_b_1 = mean(b1)
+
+cat(paste0("\n", reps, " reps estimate of B0: ", round(est_b_0, 2)))
+cat(paste0("\n", reps, " reps estimate of B1: ", round(est_b_1, 2)))
+```
+
+&nbsp;
+
+10. Calculate the 95% bootstrap confidence interval for β_1 (assuming that X is fixed)
+
+```{r, fig.width=8, fig.height=8, eval = FALSE}
+
+SE_beta1 = function(x, y)
+{
+  fit = lm(y ~ x)
+  e = fit$residuals
+  sd_x = sd(x)
+  n = length(x)
+  sqrt(sum(e^2)/((n-2)*(n-1)*(sd_x^2)))
+}
+
+
+
+fit = lm(y ~ x)
+e = fit$residuals
+sd_x = sd(x)
+t_boot = rep(0,reps)
+
+reps = 1000
+
+for(i in 1:reps)
+{
+  e_boot = sample(e, replace=TRUE)
+  y_boot = fit$coef[1] + fit$coef[2]*x + e_boot
+  
+    # now I have a bootstrap sample (x, yb)
+  fit_boot = lm(y_boot ~ x);
+  t_boot[i]=(fit_boot$coef[2] - fit$coef[2])/SE_beta1(x,y_boot)
+}
+
+# 95% CI
+alpha = 0.05
+
+left = fit$coef[2]-SE_beta1(x,y)*quantile(t_boot,1-alpha/2)
+right = fit$coef[2]-SE_beta1(x,y)*quantile(t_boot,alpha/2)
+
+
+c(left,right)
+
+
+
+```
