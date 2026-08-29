@@ -1,0 +1,122 @@
+---
+title: "Homework 2 R-couchdb and patient encounters"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Part 3 - R, CoucDB, and Patient Encounters (8 points)
+Knit the results and paste them in the final Word document!
+
+Load library RJSONIO, R4CouchDB, and httr
+```{r include=TRUE}
+library("RJSONIO")
+library("R4CouchDB")
+library("httr")
+```
+### Q3.1. I prepared a database on CouchDB from our patient encounter dataset. I would like you to get the total number of documents in this database (1 point)
+- HINT: `http://18.216.66.226:5984/patient_enc`
+- HINT: field name is `doc_count` 
+- HINT: N=2918
+```{r}
+# Get the URL
+serverUrl <- "http://18.216.66.226:5984/patient_enc"
+res <- GET(serverUrl)
+
+# Print document count for patient_enc
+content(res)$doc_count
+
+```
+
+### Q3.2. CREATE a new patient encounter (R4CouchDB) (1 point)
+Please use `0x00S2018hw2{your username}` as the id, e.g. `0x00S2018hw2wutz`, and the encounter should have the same values as encounter `0x001498BC28E96026` with different `_id` and `_rev`.
+
+- HINT: username = your 6+2 id, password = your first name, all lower case, with no special charaters and space
+- HINT: the database name is `patient_enc`, not `patient`
+- HINT: check the encounter you create at `http://18.216.66.226:5984/patient_enc/{id}`
+- HINT: if you have created the enconuter, delete the encounter before recreating it using
+```{r}
+pid = '0x00S2018hw2lapema'
+
+# Make connection to db server!
+cdb <- cdbIni(serverName="18.216.66.226",DBName="patient_enc",prot="http",port=5984,uname="lapema",pwd="michael")
+
+# Copy the data from 0x001498BC28E96026
+cdb$dataList <- list(dept_nm="UH RADIOLOGY",pat_id="0x01F089080FE0",
+                     gender="Female", age="49", primary_loc= "UCP WYOMING")
+
+# Assign my id to this new record
+cdb$id = pid
+
+# Add my new document that has the data from 0x001498BC28E96026 and my new ID.
+cdb <- cdbAddDoc(cdb)
+```
+
+### Q3.3. READ this encounter by id, pull the age value (R4CouchDB) (1 point)
+```{r include=TRUE}
+# Get the document by this pid
+cdb$id <- pid
+cdb <- cdbGetDoc(cdb)
+
+# Extract the result and print the age
+rec <- cdb$res
+rec$age
+```
+### Q3.4. UPDATE this encounter by id, add patient DoB `1969-03-05` (R4CouchDB) (1 point)
+```{r}
+# Get the document by this pid
+cdb$id <- pid
+cdb <- cdbGetDoc(cdb)
+
+# Add dob to this document and push the update.
+cdb$dataList$dob <- "1969-03-05"
+cdb <- cdbUpdateDoc(cdb)
+
+```
+
+### Q3.5. READ this encounter by id again, pull the DoB value (R4CouchDB) (1 point)
+```{r include=TRUE}
+# Get the document by this pid
+cdb$id <- pid
+cdb <- cdbGetDoc(cdb)
+
+# Print dob value
+cdb$dataList$dob
+```
+
+### Q3.6. REMOVE the DoB field of this encounter (R4CouchDB) (1 point)
+```{r}
+# Get the document by this pid
+cdb$id <- pid
+cdb <- cdbGetDoc(cdb)
+
+# Set DOB to Null and push update
+cdb$dataList$dob <- NULL
+cdb <- cdbUpdateDoc(cdb)
+```
+
+### Q3.7. SEARCH and LIST all encounters of patient `0x01F089080FE0` (RESTFul), and only show the number of encounters (length, N=11) (1 point)
+```{r}
+# Our search param
+param <- list(selector=list(pat_id="0x01F089080FE0"))
+
+# URL to submit our post to 
+findUrl <- paste(serverUrl,"/_find",sep="") 
+
+# run the POST and store return
+response <- POST(findUrl,body=param,encode="json")
+
+# Pull the content out of the response, and 'decode' the JSON.
+out <- content(response,"text",encoding="UTF-8")
+out <- fromJSON(out)
+
+# Only show the number of encounters = length of docs found
+length(out$docs)
+```
+
+### Q3.8. DELETE the encounter by ID (1 point)
+```{r}
+cdb$id <- pid
+cdb <- cdbDeleteDoc(cdb)
+```

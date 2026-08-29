@@ -1,0 +1,178 @@
+---
+title: 'BE8093 Homeowrk 1'
+author: 'Mike Lape'
+output:
+  html_document: default
+date: ''
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("RSQLite")
+
+#Create a connection to the SQLite database (change path if needed !)
+myConn = dbConnect(dbDriver("SQLite"), dbname='asthmaDatabaseClass.db')
+
+```
+<h1><center> Homework 1 - Database (20 points)</center></h1>
+
+##NAME: Mike Lape
+
+###Question 1 (3 points)
+List all diagnoses (allDiagnoses table) that start with the word 'Asthma'. Make sure there are no duplicates.
+
+#### Notes:
+- Display: All diagnoses names. [SELECT name ]
+- Filter: Diagnosis name STARTS with 'Asthma' [WHERE]
+I want the name to start with Asthma so I do LIKE and put the % wildcard only after the word
+Asthma.  Also use the distinct keyword so we only get unique results.
+
+```{sql connection=myConn, eval = TRUE}
+SELECT distinct name 
+FROM allDiagnosis
+WHERE name LIKE 'Asthma%'
+```
+
+###Question 2 (3 points)
+List for each patient their ID together with the encounter ID in which they were the youngest. Order them from old to young
+
+#### Notes:
+- Display: PatientID and Encounter ID 
+- Filter: Only show the encounter ID where they were youngest
+- Sort: Oldest to Youngest
+
+```{sql connection=myConn, eval = TRUE}
+select random_pat_id as PatientID, random_pat_enc_csn_id as EncounterID
+from patientEnc
+group by PatientID
+having min(age)
+order by  age desc
+```
+
+###Question 3 (3 points)
+List all medication names where patients were given doses between 100 and 150mg (only use meds in mg) together with those exact doses. Make sure there are no duplicates and order alphabetically and from high to low dose.
+
+#### Notes:
+- Display: Medication Name and dosage
+- Filter: 100 <= dosage <= 150                    [WHERE]
+- Filter: hv_dose_unit MUST be 'mg'               [WHERE]
+- Group: Only show unique med name, dose pairs    [GROUP BY]
+- Sort: Alphabetical then by Dose (high to low)   [ORDER BY]
+
+```{sql connection=myConn, eval = TRUE}
+select med_name as Medication, hv_discrete_dose as Dosage
+from meds
+where hv_dose_unit = "mg" and (Dosage >= 100 and Dosage <= 150)
+group by Medication, Dosage
+order by Medication, Dosage
+```
+
+###Question 4 (2 points)
+Select all patient encouter ID's that do not have a chiefComplaint for their encounter.
+
+#### Notes:
+- Display: Patient Encounter ID
+- Filter: chief complaint is NULL or empty
+
+Left join patientEnc and chiefComplaint and list encounter ID's where the
+chiefComplaint key is NULL, meaning there is no entry for encounter ID in the
+chiefComplaint table.
+
+```{sql connection=myConn, eval = TRUE}
+select patientEnc.RANDOM_PAT_ENC_CSN_ID  
+from patientEnc
+left join chiefComplaint on patientEnc.RANDOM_PAT_ENC_CSN_ID = chiefComplaint.RANDOM_PAT_ENC_CSN_ID
+where chiefComplaint.RANDOM_PAT_ENC_CSN_ID is null
+```
+
+###Question 5 (2 points)
+Select all medications (names) for patient encounters (encounter ID) that had "WCH MAIN HOSPITAL" as the hospital <u>area</u>.
+
+#### Notes:
+- Display: Med Names (no requirement for distinct) 
+- Filter: Patient encounters with hospital area of "WCH MAIN HOSPITAL"
+
+```{sql connection=myConn, eval = TRUE}
+select meds.MED_NAME
+from meds
+join patientEnc on meds.RANDOM_PAT_ENC_CSN_ID = patientEnc.RANDOM_PAT_ENC_CSN_ID
+where patientEnc.HOSPITAL_AREA = "WCH MAIN HOSPITAL"
+```
+
+###Question 6 (2 points)
+Select all patients (patient ID) who are hispanic and never smoked. Write your query in such a way you don't have duplicates.
+
+#### Notes:
+- Display: patient IDs (distinct, or could use group by random_pat_id)
+- Filter: Hispanic [WHERE]
+- Filter: Never Smoked [WHERE]
+
+```{sql connection=myConn, eval = TRUE}
+select distinct patient.random_pat_id
+from patient
+join social on social.RANDOM_PAT_ID = patient.RANDOM_PAT_ID
+where patient.ETHNIC_GROUP = 'Hispanic or Latino' and social.CIGARETTES_YN = "N"
+```
+
+###Question 7 (2 points)
+Find the average age a patients has at his/her first encounter.
+
+#### Notes:
+- Display: Average Age of all patients at which the first encounter occurs.
+Should be able to reuse the code from question 2 gives the age of the patient
+at their first encounter.  We will nest the code from question 2 inside another
+SQL command that will just average the ages.
+
+```{sql connection=myConn, eval = TRUE}
+select avg(age)
+from
+  (
+  	select random_pat_id as PatientID, random_pat_enc_csn_id as EncounterID, min(age) as age
+	  from patientEnc
+	  group by random_pat_id
+  )
+```
+###Question 8 (2 points)
+List all encounter ID's where a patient was older than the youngest patient ever diagnosed with 'Encephalopathy' (from allDiagnosis table)
+
+#### Notes:
+- Display: Encounter ID
+- Filter: Patient Age > Enceph_Age  [Where]
+- Enceph_Age: Youngest patient diagnosed with 'Encephalopathy'  [Nested Query]
+
+```{sql connection=myConn, eval = TRUE}
+select random_pat_enc_csn_id
+from patientEnc
+where age > 
+	(
+		select min(age)
+		from allDiagnosis
+		where name = 'Encephalopathy'
+	)
+```
+
+###Question 9 (1 point)
+List all medication names (no duplicates) taken by patients that have at least 3 encounters where a diagnosis containing the words 'Atrial fibrillation' was made.
+
+#### Notes:
+- Display: Medication Names (DISTINCT)
+- Filter: Patient has >= 3 At_Fib [Where]
+- At_Fib: Encounters with Diag containing 'Atrial fibrillation' [Nested]
+```{sql connection=myConn, eval = TRUE}
+select distinct meds.MED_NAME
+from meds
+where random_pat_id = 
+  (
+    select random_pat_id
+    from allDiagnosis
+    where name like '%Atrial fibrillation%'
+    group by random_pat_id
+    having count(random_pat_id)  >= 3
+  )
+``` 
+
+###Question 10 (2 BONUS points)
+Explain in a few sentences the advantage of creating views of your queries and the general SQL statement you need to accomplish this. This answer requires no SQL code, so you can just write in the white area.
+
+ANSWER: 
+There are quite a few advantages of creating views, one of the most important is that it allows you to create a 'virtual' table that has data from multiple underlying 'real' tables in the database, allowing the many joins and complex SQL statements required to create this 'virtual' table to be hidden away from the end user.  A view is also read-only which can help prevent end users altering data directly in the database.  Finally, a view can also contain computed columns, columns that are computed on other columns, such as counts, sums, or averages.  The most basic way to create a view is to use 'CREATE VIEW myNewView AS sql_statement' where sql_statement is your SELECT statement.  It can be important to check if the view already exists before creating one, this can be done by using the IF NOT EXISTS option in the CREATE VIEW statement.
