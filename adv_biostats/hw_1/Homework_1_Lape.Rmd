@@ -1,0 +1,108 @@
+---
+title: "BE7023 Homework 1"
+author: "Mike Lape"
+date: "September 12, 2018"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+  word_document: default
+---
+&nbsp;
+
+```{r, get_dat, warning=FALSE, message=FALSE}
+library(faraway)
+data("prostate")
+```
+
+1.	Describe the data, include size, top ten rows, and summary statistics.
+```{r, fig.width=8, fig.height=8}
+# The prostate dataset contains records for 97 men with prostate cancer who 
+# were going to have a radical prostatectomy. 
+dim(prostate)
+# The data has 97 rows/observations and 9 columns/variables
+# Below are the top 10 rows
+head(prostate, 10)
+# and here are the summary statistics for the prostate dataset.
+summary(prostate)
+```
+
+&nbsp;
+
+2.   Plot data with x = lcavol and y = lpsa.
+```{r, fig.width=8, fig.height=8}
+plot(prostate$lcavol, prostate$lpsa, xlab = "Log(Cancer volume)", ylab = "Log(PSA)", 
+     main = "Relationship between lcavol and lpsa", pch = 16 )
+# The plot ranges from a little below -1 and almost up to 4 in the x-axis, and
+# ranges from just below 0 to just above 5 in the y-axis.  It looks like these
+# two features, lcavol and lpsa, have a pretty linear relationship with each other, but a linear fit will tell us how well they really correlate.
+```
+
+&nbsp;
+
+3.  Fit simple linear regression model with y = lpsa and x = lcavol.
+    Write the prediction equation.
+    Report R2 and comment on it.
+    Estimate population standard deviation
+```{r, fig.width=8, fig.height=8}
+mod <- lm(lpsa ~ lcavol, prostate)
+
+# Get coefficients to write equation:
+mod$coefficients
+# Prediction Model: lpca = 1.507 + 0.719 * lcavol
+summary(mod)$adj.r.squared
+# The R2 value is 0.535, which suggests that this linear model doesn't fit the
+# data very well.
+
+# To get a good estimate of the population standard deviation we can calculate
+# RMSE
+pop_sd <- summary(mod)$sigma
+paste("We thus estimate the population standard deviation to be ", round(pop_sd,3))
+```
+
+&nbsp;
+
+4.  Prostate specific antigen (PSA) is an enzyme excreted from epithelial cells on
+    the prostate.  In men with normal prostates PSA is found in the blood in small 
+    quantities, but is often found at a higher level in men with prostate cancer or other
+    prostate issues.  It is therefore used as a diagnostic test for prostate cancer.
+    By taking some blood from the man and measuring the PSA level they can determine
+    if he has a healthy prostate or an abnormal one that requires further investigation.
+&nbsp;
+
+5.  Transform regression model back to original variables, comment on resultant model.
+Both variables being considered here are log transformed.  So lpsa is really log(psa), while lcavol is log(cavol).  To get the
+prediction model out of the log form we transform it as follows. 
+  
+log(psa) =  1.507 + 0.719 * log(cavol)  
+log(psa) = log(e^(1.507)) + 0.719 * log(cavol)  
+log(psa) = log(4.51) + log(cavol^0.719)  
+log(psa) = log(4.51 * cavol^0.719)  
+psa = 4.51 * cavol^0.719  
+(psa / cavol^0.719) = 4.51  
+
+This tells us that the average ratio between psa and cancer volume to the
+power of 0.719 is 4.51.  So if we know only the PSA or only the cancer
+volume then we can calculate what the average value of the other variable 
+using this formula.
+
+&nbsp;
+
+6.  Build 95% confidence bands as well as prediction bands around regression line.
+```{r, fig.width=8, fig.height=8}
+# First we need to generate some simulated lcavol lpsa pairs.
+# Using min and max values to define range
+sim_lcavol <-  seq(-1.3471,3.8210,0.1)
+conf <- predict(mod, list(lcavol = sim_lcavol), int = "c")
+pred <- predict(mod, list(lcavol = sim_lcavol), int = "p")
+
+# plot confidence intervals
+plot(prostate$lcavol, prostate$lpsa, xlab = "Log(Cancer volume)", ylab = "Log(PSA)", lwd = 1)
+title(main = "Scatter plot, Linear regression, 95% Confidence Bands, and 95% Prediction Bands")
+matlines(sim_lcavol, conf, lty = c(1,2,2), col = c("blue","orange", "orange"), lwd = 4)
+matlines(sim_lcavol, pred, lty = c(1,5,5), col = c("blue", "red", "red"), lwd = 4)
+legend("topleft", legend = c("Linear Regression", "95% Confidence Band", "95% Prediction Band"), lty = c(1,2,5), lwd = 2, col = c("blue", "orange", "red"))
+
+```
+
+

@@ -1,0 +1,155 @@
+---
+title: "BE7023 Homework 3"
+author: "Mike Lape"
+date: "September 26, 2018"
+output:
+  pdf_document: default
+---
+&nbsp;
+
+```{r, get_dat, warning=FALSE, message=FALSE}
+#setwd("C:/Users/lapt3u/Box/UC/Fall_2018/BE7023_Adv_Biostats/adv_biostats/hw_3")
+library(multcomp)
+dat <- litter
+```
+
+&nbsp;
+
+1.   Describe the data.
+
+The litter dataset contains the dose response of litter weights in rats. It 
+contains 4 different variables, 'dose' which represents the dosage at 1 of 4
+discrete levels: 0, 5, 50, and 500 units (a unit is not given), 'gesttime'
+which represents the gestation time for the litter, 'number' representing the number of 
+rats in a litter, and finally 'weight' representing the average post-birth
+weights of a litter. 
+```{r, fig.width=8, fig.height=8}
+summary(dat)
+```
+
+&nbsp;
+
+2.	What is the dimension of the data.
+```{r, fig.width=8, fig.height=8}
+dim(dat)
+# The data has 74 rows/observations and 4 columns/variables.
+```
+
+&nbsp;
+
+3.  What is the nature of each variable in the data? 
+```{r, fig.width=8, fig.height=8}
+sapply(dat,class)
+levels(dat$dose)
+```
+Using the class and levels functions we can see dose is a factor with 4 levels, 0, 5, 50, and 500, of an unspecified unit. The rest of the variables, gesttime, number, and weight are numeric.  However, number is specifically an integer type meaning there won't be any decimals
+in that variable, which makes sense as there can't be 0.2 of a litter, litters are made up
+of a whole number of rats.
+
+&nbsp;
+
+4.  Get summary statistics of the variables
+```{r, fig.width=8, fig.height=8}
+summary(dat)
+```
+Because dose is a factor, its summary statistics only include counts for each level, 
+where as the rest of the numerical variables have the usual min, max, mean, etc. summary
+statistics.
+
+&nbsp;
+
+5.  Obtain the mean 'weight' by dose.
+```{r, fig.width=8, fig.height=8}
+means <- aggregate(weight ~ dose, dat, mean)
+means$weight <- round(means$weight, 3)
+means
+```
+
+&nbsp;
+
+6.  Regress 'weight' by dose 
+```{r, fig.width=8, fig.height=8}
+mod <- lm(weight ~ dose, dat)
+summary(mod)
+```
+
+
+
+7. What is the R2? Is it significant?  
+The R2 for this regression is 0.038 with a p-value of 0.129, so it is not significant.
+
+&nbsp;
+
+8. Do 'aov' of 'weight' by 'dose'.  
+   Do doses differ significantly in average weight? 
+   Report the p-value.
+```{r, fig.width=8, fig.height=8}
+var_mod <- aov(weight ~ dose, dat)
+summary(var_mod)
+# With a p-value of 0.129 we can say that the doses do not differ significantly
+# in average litter wight.
+```
+&nbsp;
+
+9. Test normality and homoscedasticity
+```{r, fig.width=8, fig.height=8}
+shap_test <- shapiro.test(mod$residuals)
+shap_test
+# We can see with a p-value of 0.434 which is greater than 0.05 that according
+# to the Shapiro-Wilk test our data is both normal and homoscedastic.
+```
+&nbsp;
+
+10. Do pairwise comparisons by Tukey's HSD
+```{r, fig.width=8, fig.height=8}
+tukey <- TukeyHSD(var_mod)
+tukey
+```
+&nbsp;
+
+
+11. Get a graph of the pariwise comparisons
+```{r, fig.width=8, fig.height=8}
+par(las=2)
+par(mar = c(5,8,4,2))
+plot(tukey)
+```
+&nbsp;
+
+
+12. Get a graph of cld.  Comment on the graph.
+```{r, fig.width=8, fig.height=8}
+par(mar = c(5,4,8,2))
+lin_hyp <- glht(var_mod, linfct = mcp(dose = "Tukey"))
+plot(cld(lin_hyp, level = 0.05), col = "coral1")
+
+```
+We can see from the letters across the top, as well as all the boxes overlapping with each other that there is no significant difference in litter weight in response to different doses.
+&nbsp;
+
+
+13. Regress weight by dose and gestation.  Is gestation significant?
+```{r, fig.width=8, fig.height=8}
+dbl_mod <- lm(weight ~ dose + gesttime, dat)
+summary(dbl_mod)
+```
+We can see from the summary of our model that gesttime is significant with a p-value of 0.00271.
+
+&nbsp;
+
+
+14. Do pairwise comparisons by dose.
+```{r, fig.width=8, fig.height=8}
+dbl_tuk <- glht(dbl_mod, linfct = mcp(dose = "Tukey"))
+summary(dbl_tuk)
+```
+&nbsp;
+
+
+15. Get a graph of the pairwise comparisons.
+```{r, fig.width=8, fig.height=8}
+par(las=2)
+par(mar = c(5,8,4,2))
+plot(dbl_tuk)
+```
+&nbsp;

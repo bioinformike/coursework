@@ -1,0 +1,274 @@
+---
+title: "BE7023 Homework 6"
+author: "Mike Lape"
+date: "Octobe 31, 2018"
+output:
+  pdf_document: default
+  html_document:
+  word_document: default
+fontsize: 14pt
+---
+&nbsp;
+
+```{r, get_dat, warning=FALSE, message=FALSE}
+setwd("C:/Users/lapt3u/Box/UC/Fall_2018/BE7023_Adv_Biostats/adv_biostats/hw_6")
+library(MASS)
+```
+
+&nbsp;
+
+1.   Describe the data.  
+The birthwt dataset contains 189 rows/observations and 10 columns/variables.  
+Each row represents a birth at Baystate Medical Center in 1986. The variables
+include low an indicator if the birth weight was less than 2.5 kg, and 
+data about the mother and her health history.  
+Variables:  
+Low: Indicator of birth weight < 2.5 kg [Categorical - binary]  
+age: Age of mother in years [Numerical]  
+lwt: Mother's weight in pounds at last menstrual period [Numerical]  
+race: Mother's race, 1 = white, 2 = black, 3 = other [Categorical]  
+smoke: Smoking status during pregnancy [Categorical - binary]  
+ptl: Number of previous premature labors [Numerical]  
+ht: history of hypertension [Categorical - binary]  
+ui: Presence of uterine irritability [Categorical - binary]  
+ftv: Number of physician visits during 1st trimester [Numerical]  
+bwt: Birth weight in grams [Numerical]    
+```{r, fig.width=8, fig.height=8}
+# The birthwt dataframe has 10 columns/variables, and 189 rows/observations.
+dim(birthwt)
+
+# Top 6 rows.
+head(birthwt)
+```
+
+&nbsp;
+
+2.	Create a new folder by omitting the last column.   
+    Convert race,smoke, and ht as factors.   
+    Obtain summary statistics.   
+```{r, fig.width=8, fig.height=8}
+# Drop the last column
+dat <- birthwt[, - length(birthwt)]
+
+# Convert race, smoke, anad ht to factors
+dat$race    <- as.factor(dat$race)
+dat$smoke   <- as.factor(dat$smoke)
+dat$ht      <- as.factor(dat$ht)
+
+# Get summary stats
+summary(dat)
+```
+
+
+&nbsp;
+
+3.	Fit a logistic regression model with low as the response variable using the new folder         and covariates the rest.   
+    Identify the significant predictors.   
+    Interpret carefully the coefficients associated with race.   
+    Check goodness-of-fit carefully defining what the null hypothesis is. 
+
+&nbsp;
+
+```{r, fig.width=8, fig.height=8}
+# fit log reg on low
+mod <- glm(low ~ ., data = dat, family = binomial)
+summary(mod)
+```
+&nbsp;
+
+The significant predictors, those with a p-val < 0.05 are    
+lwt        (P-val = 0.02580)    
+race2      (P-val = 0.01584)    
+race3      (P-val = 0.04576)    
+smoke1     (P-val = 0.01957)    
+ht1        (P-val = 0.00756)    
+
+&nbsp;
+
+In this model race1 [white] is held as the reference and p-values as well as 
+coefficients are calculated for both race2 [black] (p-val = 0.01584, coeff = 1.272 ) and race3 [other] (p-val = 0.04576, coeff = 0.880).  The positive coefficients indicate that mothers of race2 [black] and race3 [other] have increased odds of giving birth to an 
+underweight baby as compared to race1 [white] mothers.
+
+&nbsp;
+
+```{r, fig.width=8, fig.height=8}
+# Check goodness of fit
+res <- mod$deviance
+dof <- mod$df.residual
+p <- pchisq(res, dof, lower.tail = F)
+round(p, 3)
+# Our null hypothesis is that our multinomial logistic regression model
+# adequately describes the data. Our p value is 0.122 and since it is 
+# greater than 0.05 we cannot reject the null hypothesis and thus our 
+# model is a good fit of the data.
+```
+
+
+&nbsp;  
+
+4.	Fit a logistic regression model with low as the response variable and predictors lwt,          race, smoke, and ht.    
+    Write the prediction equation.   
+    Identify the most significant predictor.   
+    Find a way to plot P(low =1) as a function of lwt in the presence of various choices of          race, smoke, and ht.   
+    Check goodness-of-fit.   
+    Obtain confusion matrix.   
+    Calculate the misclassification rate.     
+```{r, fig.width=8, fig.height=8}
+mod2 <- glm(low ~ lwt + race + smoke + ht, data = dat, family = binomial)
+summary(mod2)
+```
+Prediction Equation:  
+Pr(low birth weight = Yes) = e^(Z) / ( 1 + e^(Z))
+
+Where: 
+Z = 0.3520 - (0.0179 * lwt) + (1.2877 * race2) + (0.9436 * race3) + 
+          (1.0716 * smoke1) + (1.749 * ht1)
+
+&nbsp;
+
+All of the predictors are significant, the most significant predictor is 
+smoke1 (Smoking = Yes) with a p-value of 0.00569.
+
+&nbsp;
+plot P(low =1) as a function of lwt in the presence of various choices 
+of race, smoke, and ht.
+
+For some reason Rmarkdown was not including 4 of the plots so I took a snapshot
+of it working properly in R and just included that here.
+![](p4_small.png)
+
+```{r, fig.width=8, fig.height=8}
+# cols <- palette(rainbow(12))
+# # RACE = 2
+# # Race = 2, smoke = 1, ht = 1
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#             (1.0716 * 1) + (1.749 * 1)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#             (1.0716 * 1) + (1.749 * 1))), from = 80, to = 250, lwd = 3,
+#                 col = cols[1], ylim = c(0,1),
+#           xlab = "Mother's Weight at Last Menstrual Period [lb]",
+#           ylab = "Probability of Birth Weight < 2.5 kg",
+#           main = "Probability of Low Birth Weight - Logistic Regression")
+# 
+# # Race = 2, smoke = 1, ht = 0
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#           (1.0716 * 1) + (1.749 * 0)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#           (1.0716 * 1) + (1.749 * 0))), col = cols[2], lwd = 3,
+#             add = T)
+# 
+# # Race = 2, smoke = 0, ht = 1
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#           (1.0716 * 0) + (1.749 * 1)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#           (1.0716 * 0) + (1.749 * 1))), col = cols[3], lwd = 3,
+#             add = T)
+# 
+# # Race = 2, smoke = 0, ht = 0
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#           (1.0716 * 0) + (1.749 * 0)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 1) + (0.9436 * 0) +
+#           (1.0716 * 0) + (1.749 * 0))), col = cols[4], lwd = 3,
+#             add = T)
+# 
+# ##RACE = 3
+# 
+# # Race = 3, smoke = 1, ht = 1
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#             (1.0716 * 1) + (1.749 * 1)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#             (1.0716 * 1) + (1.749 * 1))), col = cols[5], lwd = 3,
+#             add = T)
+# 
+# # Race = 3, smoke = 1, ht = 0
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#           (1.0716 * 1) + (1.749 * 0)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#           (1.0716 * 1) + (1.749 * 0))), col = cols[6], lwd = 3,
+#             add = T)
+# 
+# 
+# # Race = 3, smoke = 0, ht = 1
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#           (1.0716 * 0) + (1.749 * 1)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#           (1.0716 * 0) + (1.749 * 1))), col = cols[7], lwd = 3,
+#             add = T)
+# 
+# # Race = 3, smoke = 0, ht = 0
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#           (1.0716 * 0) + (1.749 * 0)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 1) +
+#           (1.0716 * 0) + (1.749 * 0))), col = cols[8], lwd = 3,
+#             add = T)
+# 
+# # RACE = 1
+# # Race = 3, smoke = 1, ht = 1
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#             (1.0716 * 1) + (1.749 * 1)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#             (1.0716 * 1) + (1.749 * 1))), col = cols[9], lwd = 3,
+#             add = T)
+# 
+# 
+# # Race = 0, smoke = 1, ht = 0
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#           (1.0716 * 1) + (1.749 * 0)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#           (1.0716 * 1) + (1.749 * 0))), col = cols[10], lwd = 3,
+#             add = T)
+# 
+# # Race = 0, smoke = 0, ht = 1
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#           (1.0716 * 0) + (1.749 * 1)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#           (1.0716 * 0) + (1.749 * 1))), col = cols[11], lwd = 3,
+#             add = T)
+# 
+# # Race = 0, smoke = 0, ht = 0
+# curve(exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#             (1.0716 * 0) + (1.749 * 0)) /
+#         (1 + exp(0.3520 - (0.0179 * x) + (1.2877 * 0) + (0.9436 * 0) +
+#             (1.0716 * 0) + (1.749 * 0))), col = cols[12], lwd = 3,
+#             add = T)
+# 
+# legend("topright", pch = rep(16,12), col = cols, legend =
+#          c("Race = 2, Smoke = Y, HT = Y",
+#            "Race = 2, Smoke = Y, HT = N",
+#            "Race = 2, Smoke = N, HT = Y",
+#            "Race = 2, Smoke = N, HT = N",
+#            "Race = 3, Smoke = Y, HT = Y",
+#            "Race = 3, Smoke = Y, HT = N",
+#            "Race = 3, Smoke = N, HT = Y",
+#            "Race = 3, Smoke = N, HT = N",
+#            "Race = 1, Smoke = Y, HT = Y",
+#            "Race = 1, Smoke = Y, HT = N",
+#            "Race = 1, Smoke = N, HT = Y",
+#            "Race = 1, Smoke = N, HT = N"))
+
+# Check goodness-of-fit. 
+res2 <- mod2$deviance
+dof2 <- mod2$df.residual
+p2 <- pchisq(res2, dof2, lower.tail = F)
+round(p2,3)
+# Our p-value is 0.097, so we cannot reject the null hypothesis and
+# thus our logistic regression model fits this data well.
+
+# Obtain confusion matrix. 
+# Running the training data through the model to get some predictions
+pred <- predict.glm(mod2, type = "response" )
+
+# Classify the prediction, and build confusion matrix. 
+pred_class <- ifelse(pred >= 0.5, 1,0)
+conf <- table(dat$low, pred_class)
+rownames(conf) = c('Obs_Normal', 'Obs_Low')
+colnames(conf) = c('Pred_Normal', 'Pred_Low')
+conf  
+
+# Calculate misclassification rate using confusion matrix.
+miss <- round(((conf[2] + conf[3]) / (conf[1] + conf[2] + conf[3] + conf[4])) * 100,2)
+
+
+cat("The misclassification rate is: ", miss, "%")
+
+```

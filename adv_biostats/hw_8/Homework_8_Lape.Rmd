@@ -1,0 +1,57 @@
+---
+title: "BE7023 Homework 8"
+author: "Mike Lape"
+date: "November 21, 2018"
+output:
+  pdf_document: default
+---
+
+&nbsp;
+
+```{r, get_dat, warning=FALSE, message=FALSE}
+#setwd("C:/Users/lapt3u/Box/UC/Fall_2018/BE7023_Adv_Biostats/adv_biostats/hw_8")
+library(MatchIt)
+dat <- lalonde
+dim(dat)
+summary(dat)
+sapply(dat, class)
+head(dat)
+```
+
+&nbsp;
+```{r, matching, warning=FALSE, message=FALSE}
+# Optimal matching
+opt <- matchit(treat ~ age + educ + black + hispan + married, data = dat,
+               method = "optimal", ratio = 2)
+
+summary(opt)
+# So all of our treated samples we matched, we just have 59 extra controls that were not matched.
+
+# Let's grab the match data
+mat_dat <- match.data(opt)
+
+dim(mat_dat)
+summary(mat_dat)
+head(mat_dat)
+
+table(mat_dat$subclass)
+
+mat_dat <- mat_dat[order(mat_dat$subclass),]
+
+head(mat_dat)
+
+mat_dat$subclass <- as.factor(mat_dat$subclass)
+
+mat_mod <- lm(re78 ~ treat + nodegree + re74 + re75 + subclass, data = mat_dat)
+summary(mat_mod)
+
+# R2 is low but still significant, nodegree is significant, and re74 is very significant.
+
+
+# Now lets do anova
+an <- anova(mat_mod, test = "chisq")
+an
+
+# We can see that subclass is not significant and that nodegree and re74 are both significant.
+```
+

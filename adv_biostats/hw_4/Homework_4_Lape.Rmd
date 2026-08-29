@@ -1,0 +1,214 @@
+---
+title: "BE7023 Homework 4"
+author: "Mike Lape"
+date: "Octobe 3, 2018"
+output:
+  pdf_document: default
+---
+&nbsp;
+
+```{r, get_dat, warning=FALSE, message=FALSE}
+#setwd("C:/Users/lapt3u/Box/UC/Fall_2018/BE7023_Adv_Biostats/adv_biostats/hw_4")
+library(car)
+library(MASS)
+library(leaps)
+dat <- Highway1
+```
+
+&nbsp;
+
+1.   Determine the dimension of the data.   
+     Show the top ten rows of the data.   
+     Obtain summary statistics of the data.   
+```{r, fig.width=8, fig.height=8}
+dim(dat)
+# The Highway1 dataset has 39 rows/observations and 12 columns/variables
+
+# Top 10 rows of Highway1:
+head(dat, 10)
+
+# Summary statistics of Highway1:
+summary(dat)
+```
+
+&nbsp;
+
+2.	Describe the data.  
+```{r, fig.width=8, fig.height=8}
+# This dataset has auto accident rates per million vehicle miles for 39 stetches of road
+# in Minnesota in the year 1973, as well as other variables to describe that stretch of 
+# road.  It was put together by Carl Hoffstedt.
+# Variables:
+#   rate:   auto accident rate in 1973 [accidents/million vehicle miles]
+#   len:    length of a highway segment [miles]
+#   adt:    average daily traffic count in thousands
+#   trks:   truck volume as percent of total volume
+#   sigs1:  number of signals per mile of roadway
+#   slim:   speed limit of stretch of road in 1973
+#   shld:   width of outer shoulder on road [feet]
+#   lane:   total number of traffic lanes
+#   acpt:   nummber of access points per mile
+#   itg:    number of freeway-type interchanges per mile
+#   lwid:   lane width [feet]
+#   htype:  Type of roadway or source of funding for road
+sapply(dat, class)
+levels(dat$htype)
+# All variabes are either numeric or integers (no decimals) except for htype
+# which is a factor/categorical with 4 levels, "FAI", "MA", "MC", "PA".
+```
+
+&nbsp;
+
+3.The response variable is 'rate.'  
+  log2(rate) is taken to be the response variable.   
+  The predictors are taken to be: log2(len); log2(ADT); log2(trks); log2(sigs1); slim; shld;      lane; acpt; itg; lwid; hwy. (The last predictor is categorical with four levels.)   
+  You respect the transformations recommended.   
+  Fit a full regression model.   
+  Comment on the output including R2.   
+  Write the prediction model.   
+  Identify the significant predictors.   
+  Explain how the categorical variable 'hwy' is  handled.   
+  Estimate the standard deviation of the error.   
+```{r, fig.width=8, fig.height=8}
+# Construct seperate df for holding our log transformed dataset
+
+l_dat <-  dat[,6:12]
+
+# Transforming variables as needed
+l_dat$l_rate  <- log2(dat$rate)
+l_dat$l_len   <- log2(dat$len)
+l_dat$l_adt   <- log2(dat$adt)
+l_dat$l_trks  <- log2(dat$trks)
+l_dat$l_sigs1 <- log2(dat$sigs1)
+
+mod_full <- lm(l_rate ~ . , l_dat)
+summary(mod_full)
+
+```
+Our model using all predictors has an R2 of 0.683 with a p-value of 1.247e-05,
+indicating a decent and significant fit.  We have 2 significant predictors
+not counting the intercept, Log2(len) and Log2(sigs1).
+
+Prediction Equation:  
+Log2(rate) = 6.047 - (0.214 * Log2(len)) - (0.155 * Log2(adt)) - (0.198 * Log2(trks)) +  
+                   (0.192 * Log2(sigs1)) - (0.039 * slim) + (0.004 * shld) -   
+                   (0.016 * lane) + (0.009 * acpt)+ (0.052 * itg) + (0.061 * lwid) -  
+                   (0.550 * htype[MA]) - (0.343 * htype[MC]) - (0.755 * htype[PA])   
+
+Significant Predictors:  
+  Log2(len)   [p_val = 0.0419]: Log2 of the length of road segment in miles  
+  Log2(sigs1) [p_val = 0.0172]: Log2 of number of signals per mile of roadway  
+  
+The categorical variable htype that has 4 levels is broken down into dummy
+variables essentially from 1 variable creating 3 dichotomous variables
+one for each level except one is considered the baseline, in this case htype[FAI],
+so for a road with hytpe of MA it would have a htype[MA] = 1, but an 
+htype[MC] = 0 and an htype[PA] also equal to 0, and if the htype was FAI
+then htype[MA,MC,PA] would all equal 0.
+
+```{r, fig.width=8, fig.height=8}
+# Standard deviation of the error, aka standard error is given as sigma
+# from the lm summary, ours is: 0.376
+round(summary(mod_full)$sigma,3)
+```
+
+&nbsp;
+
+4.  Employ the 'backward elimination procedure' on the model in Q3 to obtain 
+        a tight model according to the Akaike Information Criterion.  
+    Write the final prediction model.   
+    Compare its R2 with the R2 of the full model.   
+    Compare the estimates of the standard deviation of the error terms.   
+```{r, fig.width=8, fig.height=8}
+# For backwards we will just start with our full model created previously.
+tight_mod <- stepAIC(mod_full, direction = "backward")
+summary(tight_mod)
+# Let's get our coefficients, R2, and SE.
+round(tight_mod$coefficients,3)
+round(summary(tight_mod)$adj.r.squared,3)
+round(summary(tight_mod)$sigma,3)
+```
+
+Prediction equation for tight model:  
+Log2(rate) = 6.455 - (0.262 * Log2(len)) - (0.127 * Log2(adt)) + (0.208 * Log2(sigs1)) - 
+                     (0.043 * slim) - (0.384 * htype[MA]) - (0.179 * htype[MC]) - 
+                     (0.715 * htype[PA]) 
+
+Significant Predictors:  
+  Log2(len)   [p_val = 0.0033]: Log2 of the length of road segment in miles  
+  Log2(sigs1) [p_val = 0.0012]: Log2 of number of signals per mile of roadway  
+  slim        [p_val = 0.0044]: Speed limit of road in 1973  
+  htype[PA]   [p_val = 0.0182]: Type of road = PA  
+  
+The R2 of this tight model is 0.725 with a p_value of 1.835e-08.  Both the 
+R2 and the p_value are better for the tight model than the full model.  The
+full model has an R2 of 0.683 which is a bit lower than the R2 for the tight
+model, indicating the tight model provides a better fit, and is a bit more
+significant since it as p_value of 1.835e-08 whereas the full model has a 
+larger p-value of 1.247e-05.  
+
+The standard deviation of the error, SE, for the tight model is 0.351 whereas
+the SE for the full model is the larger and thus worse 0.376.  
+
+&nbsp;
+
+5.	What is the total number of all possible regressions for the data on hand?   
+    Use the R function 'regsubsets' (package = "leaps") on the highway data.   
+    Explain the output.     
+    
+The # of predictors we have here is 11, but 1 is categorical with 4 levels,
+which will be broken into 3 dummy variables (1 held as baseline).  These 3
+dummy variables replace the one htype variable so in total we have 13
+predictors.  So the number of all possible regressions we can do for 
+Highway1 is 8191.  
+```{r, fig.width=8, fig.height=8}
+# Number of regressions possible.
+(2^13) - 1
+
+# Let's search for the best model
+sub_mod <- regsubsets(l_rate ~ ., data = l_dat)
+summary(sub_mod)
+```
+We can see that we have 13 variables, which is what we expected and thus
+there would be 8191 total possible regression models.  However, the regsubsets
+function in the leaps package has a default limit of 8 predictors, so it stops
+after generating the best 8 predictor model, meaning it did a max of only 2^8 - 1 
+regressions. You are able to change this limitation according
+to the documentation, but I did not do this here.  The output shows the predictors
+used in the top models from a regression model using only 1 predictor up to a 
+model using 8 (the max) predictors. We can see that the best 1 predictor model
+uses 'slim', and at the 8 predictor model, it uses just 'slim', 'htype[MA]', 'htype[PA]',
+'log2(len)', 'log2(adt)', 'log2(trks)', 'log2(sigs1)'.
+
+&nbsp;
+
+6.  Apply the 'forward selection procedure' on the 'highway1' data.   
+    Write the final prediction model.   
+    Compare and contrast this model with the one in Question 4.   
+```{r, fig.width=8, fig.height=8}
+# First create the null model
+null_mod <- lm(l_rate ~ 1, data = l_dat)
+
+# Same as in Q4 but using forward instead of backward.
+fwd_mod <- stepAIC(null_mod, direction = "forward", 
+                   scope = list(lower = null_mod, upper = mod_full))
+summary(fwd_mod)
+# Let's get our coefficients, R2, and SE.
+round(fwd_mod$coefficients,3)
+round(summary(fwd_mod)$adj.r.squared,3)
+round(summary(fwd_mod)$sigma,3)
+```
+
+The forward selection procedure produces the following prediction equation:  
+Log2(rate) = 6.011 - (0.236 * Log2(len)) - (0.329 * Log2(trks)) +
+                     (0.016 * acpt) - (0.046 * slim)
+                     
+The forward selection procedure model produces a model using only 4 predictors
+whereas the backwards selection procedure model uses 7!  The forward model
+has an R2 of 0.66 with a p-value of 2.067e-08, whereas backwards has a R2
+of 0.725 with a p-vale of 1.835e-08, so the backwards model is able to fit
+the data a bit better and both fits have similar significance values. The 
+forward model has a SE of 0.389 whereas the backwards model has a slightly
+smaller SE at 0.351.  So the backwards model produces a slightly better 
+model but with the added expense of 3 more predictors than used in the
+forward selection procedure generated model.

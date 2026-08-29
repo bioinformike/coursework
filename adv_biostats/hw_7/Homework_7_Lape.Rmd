@@ -1,0 +1,390 @@
+---
+title: "BE7023 Homework 7"
+author: "Mike Lape"
+date: "November 7, 2018"
+output:
+  pdf_document: default
+---
+
+&nbsp;
+
+```{r, get_dat, warning=FALSE, message=FALSE}
+#setwd("C:/Users/lapt3u/Box/UC/Fall_2018/BE7023_Adv_Biostats/adv_biostats/hw_7")
+library(VGAM)
+# Death < Vegetative < Major Disability < Minor Disability < Good Recovery 
+# Load the data
+treat     <- c(1,2,3,4)
+treat_names     <- c("Placebo", "Low", "Medium", "High")
+death     <- c(59,48,44,43)
+veg       <- c(25,21,14,4)
+maj_dis   <- c(46,44,54,49)
+min_dis   <- c(48,47,64,58)
+good      <- c(32,30,31,41)
+
+dat <- data.frame(treat, death, veg, maj_dis, min_dis, good)
+total     <- rowSums(dat[2:6])
+```
+
+&nbsp;
+
+1. Postulate a multinomial logistic regression model by treating the covariate as numerical.
+```{r, fig.width=8, fig.height=8}
+class(dat$treat)
+mod <- vglm(cbind(death, veg, maj_dis, min_dis, good) ~ treat, data = dat,
+            family = multinomial)
+summary(mod)
+```
+
+&nbsp;
+
+2.	Count the number of parameters in the model.   
+This model contains 8 parameters!
+
+
+
+&nbsp;
+
+3.	Fit the model to the data. Write the prediction model.   
+The model was fitted in problem 1, the prediction equation is below.
+
+$$\Huge Pr(Death | Treatment)           =  \frac{e^{(0.846 - 0.191 * Treatment)}}{D}$$
+  
+$$\Huge Pr(Veg State | Treatment)       = \frac{e^{(0.500 - 0.546 * Treatment)}}{D}$$
+
+$$\Huge Pr(Maj Disability | Treatment)  = \frac{e^{(0.479 - 0.044 * Treatment)}}{D}$$
+
+$$\Huge Pr(Min Disability  | Treatment) = \frac{e^{(0.474 + 0.003 * Treatment)}}{D}$$
+
+$$\Huge Pr(Good | Treatment) = \frac{1}{D}$$
+
+$$\Huge D = 1 +  e^{(0.846 - 0.191 * Treatment)} +  e^{(0.500 - 0.546 * Treatment)} +  
+         e^{(0.479 - 0.044 * Treatment)} +  e^{(0.474 + 0.003 * Treatment)}$$
+
+&nbsp;  
+
+4.	Check the adequacy of the model
+```{r, fig.width=8, fig.height=8}
+# Check the goodness of fit!
+res_dev <- 5.9785
+dof     <- 8
+p       <- round(pchisq(res_dev, dof, lower.tail = F),3)
+
+paste("p-val: ", p, sep = "")
+# Our p-value is 0.650, which means we cannot reject our null hypothesis and
+# thus our multinomial model fits our data well.
+```
+
+&nbsp;  
+
+
+5.	Compare the observed and predicted probabilities and frequencies.
+```{r, fig.width=8, fig.height=8}
+pred <- round(predict(mod, newdata = dat, type = "response"),3)
+exp_freq  <- round(pred * total, 1)
+comp <- data.frame(dat, exp_freq)
+
+#comp
+
+# I think it is easier to view the difference between our observed frequencies
+# and expected frequencies directly, in which we can see that the 
+# predicted values agree quite well with the observed data
+dat[,2:6] - exp_freq
+
+pred_perc <- pred * 100
+rownames(pred_perc)  <- c("Placebo", "Low Dose", "Medium Dose", "High Dose")
+```
+
+&nbsp;  
+
+6.	Obtain bar plots of predicted probabilities in two different ways. 
+```{r, fig.width=8, fig.height=8}
+barplot(pred_perc, beside = T, col = terrain.colors(4), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Multinomial Logistic Regression Model Grouped by Outcome", 
+      sub = "SAH Data - Treatment as Numerical")
+legend(legend = rownames(pred_perc), pch = rep(16,4), col = terrain.colors(4), "topright")
+
+# Transpose
+barplot(t(pred_perc), beside = T, col = terrain.colors(5), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Multinomial Logistic Regression Model Grouped by Treatment", 
+      sub = "SAH Data - Treatment as Numerical")
+legend(legend = colnames(pred_perc), pch = rep(16,4), col = terrain.colors(5), "topright")
+```
+
+&nbsp;  
+
+7. Postulate a multinomial logistic regression model by treating the covariate as categorical.
+```{r, fig.width=8, fig.height=8}
+cat_dat       <- dat
+cat_dat$treat <- treat_names
+cat_dat$treat <- factor(cat_dat$treat)
+class(cat_dat$treat)
+cat_mod <- vglm(cbind(death, veg, maj_dis, min_dis, good) ~ treat, data = cat_dat,
+            family = multinomial, half.stepsizing = F)
+summary(cat_mod)
+
+```
+
+&nbsp; 
+
+8.	Count the number of parameters in the model.   
+This model has 16 parameters!
+
+&nbsp; 
+
+9.	Fit the model to the data. Write the prediction model.  
+The model was fitted in problem 7, the prediction model can be found below.
+
+
+$$\Huge Pr(Death | Treatment) = \frac{e^{(0.048 + (0.422 * Low_Dose) + (0.303 * Mid_Dose) + (0.564 * Placebo)}}{D}$$
+
+$$\Huge Pr(Veg State | Treatment)       = \frac{e^{(-2.327 + (1.971 * Low_Dose) + (1.532 * Mid_Dose) + 
+                        (2.080 * Placebo)}}{D}$$
+
+$$\Huge Pr(Maj Disability | Treatment)  = \frac{e^{(0.178 + (0.205 * Low_Dose) + (0.377 * Mid_Dose) + 
+                      (0.185 * Placebo)}}{D}$$
+
+$$\Huge Pr(Min Disability  | Treatment) = \frac{e^{(0.347 + (0.102 * Low_Dose) + (0.378 * Mid_Dose) + (0.059 * Placebo)}}{D}$$
+
+$$\Huge Pr(Good | Treatment) = \frac{1}{D}$$
+
+D = 1 + e^{0.048 + (0.422 * Low_Dose) + (0.303 * Mid_Dose) + (0.564 * Placebo)} +     
+              e^{-2.327 + (1.971 * Low_Dose) + (1.532 * Mid_Dose) + (2.080 * Placebo)} +    
+              e^{(0.178 + (0.205 * Low_Dose) + (0.377 * Mid_Dose) +  (0.185 * Placebo)} +
+              e^{(0.347 + (0.102 * Low_Dose) + (0.378 * Mid_Dose) + (0.059 * Placebo)}
+             
+             
+             
+High Dose (4) held as baseline for treatments.
+
+&nbsp; 
+
+10.	Check the adequacy of the model. 
+```{r, fig.width=8, fig.height=8}
+# Check the goodness of fit!
+cat_res_dev <- -4.363e-14
+cat_dof     <- 0
+cat_p       <- round(pchisq(cat_res_dev, cat_dof, lower.tail = F),3)
+
+paste("p-val: ", cat_p, sep = "")
+# Our p-value is 1, which means we cannot reject our null hypothesis and
+# thus our multinomial model fits our data well.
+```
+
+&nbsp; 
+
+11.	Compare the observed and predicted probabilities and frequencies. 
+```{r, fig.width=8, fig.height=8}
+cat_pred <- round(predict(cat_mod, newdata = cat_dat, type = "response"),3)
+cat_exp_freq  <- round(cat_pred * total, 1)
+cat_comp <- data.frame(cat_dat, cat_exp_freq)
+
+#cat_comp
+
+# Comparing our observed frequencies and expected frequencies directly, 
+# in which we can see that the predicted values are almost exactly the 
+# observed data, much better than seen in the model where treatment was
+# considered as a numeric.
+cat_dat[,2:6] - cat_exp_freq
+
+cat_pred_perc <- cat_pred * 100
+rownames(cat_pred_perc)  <- c("Placebo", "Low Dose", "Medium Dose", "High Dose")
+```
+
+&nbsp; 
+
+12.	Obtain bar plots of predicted probabilities in two different ways
+```{r, fig.width=8, fig.height=8}
+barplot(cat_pred_perc, beside = T, col = terrain.colors(4), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Multinomial Logistic Regression Model Grouped by Outcome", 
+      sub = "SAH Data - Treatment as Categorical")
+legend(legend = rownames(cat_pred_perc), pch = rep(16,4), col = terrain.colors(4), "topright")
+
+# Transpose
+barplot(t(cat_pred_perc), beside = T, col = terrain.colors(5), ylim = range(0,40),
+        ylab = "Percent Probability", main = "Multinomial Logistic Regression Model Grouped by Treatment", 
+        sub = "SAH Data - Treatment as Categorical")
+legend(legend = colnames(cat_pred_perc), pch = rep(16,4), col = terrain.colors(5), "topright")
+```
+
+&nbsp; 
+
+13.	Postulate a proportional odds model by treating the covariate as numerical. 
+```{r, fig.width=8, fig.height=8}
+class(dat$treat)
+prop_mod <- vglm(cbind(death, veg, maj_dis, min_dis, good) ~ treat, data = dat,
+            family = cumulative(par = T))
+
+summary(prop_mod)
+```
+
+&nbsp; 
+
+14.	Count the number of parameters in the model.   
+This model has only 5 parameters in it.
+
+&nbsp; 
+
+
+15.	Fit the model to the data. Write the prediction model.   
+The model was fit in number 13, the prediction models can be found below.
+
+$$\Huge Pr(Death | Treatment)           = \frac {e^{(-0.719 - 0.175 * treatment)}}{1 + e^{(-0.719 - 0.175 * treatment)}}$$
+  
+$$\Huge Pr(Death) + Pr(Veg State)       = \frac {e^{(-0.319 - 0.175 * treatment)}}{1 + e^{(-0.319 - 0.175 * treatment)}}$$
+
+$$\Huge  Pr(Death) + Pr(Veg State) + Pr(Maj Disability)  = \frac {e^{(0.692 - 0.175 * treatment)}}{1 + e^{(0.692 - 0.175 * treatment)}}$$
+
+$$\Huge Pr(Death) + Pr(Veg State) + Pr(Maj Disability) + Pr(Min Disability) = \frac {e^{(2.057 - 0.175 * treatment)}}{1 + e^{(2.057 - 0.175 * treatment)}}$$
+
+$$\Huge Pr(Death) + Pr(Veg State) + Pr(Maj Disability) + Pr(Min Disability) + Pr(Good) = 1 - Pr(Min Disability) $$
+where treatment:
+Placebo =         1
+Low Dose =        2
+Medium Dose =     3
+High Dose =       4
+
+
+&nbsp; 
+
+16.	Check the adequacy of the model. 
+```{r, fig.width=8, fig.height=8}
+prop_res_dev   <- 18.1825
+prop_dof       <- 11
+prop_p         <- round(pchisq(prop_res_dev, prop_dof, lower.tail = F),3)
+prop_p
+# Our p-value is 0.077 so we still cannot reject our null hypothesis and thus
+# our model adequately fits our data but definitely not as well as the
+# multinomial logistic regression seen above.
+```
+
+&nbsp; 
+
+17.	Compare the observed and predicted probabilities and frequencies. 
+```{r, fig.width=8, fig.height=8}
+prop_pred <- round(predict(prop_mod, newdata = dat, type = "response"),3)
+prop_exp_freq  <- round(prop_pred * total, 1)
+prop_comp <- data.frame(dat, prop_exp_freq)
+
+#prop_comp
+
+# Comparing our observed frequencies and expected frequencies directly, 
+# in which we can see that there is more distance between the predicted 
+# values and the observed data, worse than both multinomial models.
+
+# considered as a numeric.
+dat[,2:6] - prop_exp_freq
+
+prop_pred_perc <- prop_pred * 100
+rownames(prop_pred_perc)  <- c("Placebo", "Low Dose", "Medium Dose", "High Dose")
+
+```
+
+&nbsp; 
+
+18.	Obtain bar plots of predicted probabilities in two different ways. 
+```{r, fig.width=8, fig.height=8}
+barplot(prop_pred_perc, beside = T, col = terrain.colors(4), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Proportional Odds Model Grouped by Outcome", 
+      sub = "SAH Data - Treatment as Numerical")
+legend(legend = rownames(prop_pred_perc), pch = rep(16,4), col = terrain.colors(4), "topright")
+
+# Transpose
+barplot(t(prop_pred_perc), beside = T, col = terrain.colors(5), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Proportional Odds Model Grouped by Treatment", 
+      sub = "SAH Data - Treatment as Numerical")
+legend(legend = colnames(prop_pred_perc), pch = rep(16,4), col = terrain.colors(5), "topright")
+```
+
+&nbsp; 
+
+19.	Postulate a proportional odds model by treating the covariate as categorical. 
+```{r, fig.width=8, fig.height=8}
+class(cat_dat$treat)
+prop_cat_mod <- vglm(cbind(death, veg, maj_dis, min_dis, good) ~ treat, data = cat_dat,
+            family = cumulative(par = T))
+
+summary(prop_cat_mod)
+```
+
+&nbsp; 
+
+20.	Count the number of parameters in the model.   
+The model has 7 parameters in it.
+
+&nbsp; 
+
+21.	Fit the model to the data. Write the prediction model.   
+The model was fitted in problem 19, the prediction model can be found below.
+
+$$\Huge Pr(Death | Treatment)           = \frac {e^{(-1.440 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}{1 + e^{(-1.440 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}$$
+  
+$$\Huge Pr(Death) + Pr(Veg State)       = \frac {e^{(-1.039 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}{1 + e^{(-1.039 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}$$
+
+$$\Huge  Pr(Death) + Pr(Veg State) + Pr(Maj Disability)  = \frac {e^{(-0.029 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}{1 + e^{(-0.029 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}$$
+
+$$\Huge Pr(Death) + Pr(Veg State) + Pr(Maj Disability) + Pr(Min Disability) =$$    
+$$\Huge \frac {e^{(1.337 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}{1 + e^{(1.337 + (0.403 * Low Dosase) + (0.203 * Medium Dosage) + (0.521 * Placebo))}}$$
+
+$$\Huge Pr(Death) + Pr(Veg State) + Pr(Maj Disability) + Pr(Min Disability) + Pr(Good) = 1 - Pr(Min Disability) $$
+
+
+&nbsp; 
+
+22.	Check the adequacy of the model. 
+```{r, fig.width=8, fig.height=8}
+prop_cat_res_dev   <- 18.0496
+prop_cat_dof       <- 9
+prop_cat_p         <- round(pchisq(prop_cat_res_dev, prop_cat_dof, lower.tail = F),3)
+prop_cat_p
+# Our p-value is 0.035 which is less than 0.05 so we reject the null hypothesis
+# and say this proportional odds model does not fit our data well.
+```
+
+&nbsp; 
+
+23.	Compare the observed and predicted probabilities and frequencies.  
+```{r, fig.width=8, fig.height=8}
+prop_cat_pred <- round(predict(prop_cat_mod, newdata = cat_dat, type = "response"),3)
+prop_cat_exp_freq  <- round(prop_cat_pred * total, 1)
+prop_cat_comp <- data.frame(cat_dat, prop_cat_exp_freq)
+
+#prop_cat_comp
+
+# Comparing our observed frequencies and expected frequencies directly, 
+# in which we can see that there is similar distance between the predicted 
+# values and the observed data as seen in the proportional odds model where
+# treatment was treated as numerical and is still much worse than both multinomial 
+# models.
+cat_dat[,2:6] - prop_cat_exp_freq
+
+prop_cat_pred_perc <- prop_cat_pred * 100
+rownames(prop_cat_pred_perc)  <- c("Placebo", "Low Dose", "Medium Dose", "High Dose")
+```
+
+&nbsp; 
+
+24.	Obtain bar plots of predicted probabilities in two different ways. 
+```{r, fig.width=8, fig.height=8}
+barplot(prop_cat_pred_perc, beside = T, col = terrain.colors(4), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Proportional Odds Model Grouped by Outcome", 
+      sub = "SAH Data - Treatment as Categorical")
+legend(legend = rownames(prop_cat_pred_perc), pch = rep(16,4), col = terrain.colors(4), "topright")
+
+# Transpose
+barplot(t(prop_cat_pred_perc), beside = T, col = terrain.colors(5), ylim = range(0,40))
+title(ylab = "Percent Probability", main = "Proportional Odds Model Grouped by Treatment", 
+      sub = "SAH Data - Treatment as Categorical")
+legend(legend = colnames(prop_cat_pred_perc), pch = rep(16,4), col = terrain.colors(5), "topright")
+```
+
+&nbsp; 
+
+25.	Compare and contrast the four models.   
+    Which of the four models would you propose as summary of the data?   
+    Why?   
+    Which treatment regimen would you recommend?   
+    Why?   
+
+  Both of the proportional odds models have much worse p-values than the multinomial models, and the multinomial model
+  where we consider treatment as a categorical has a p-value of 1.  When comparing predicted frequencies and observed 
+  frequencies for the categorical multinomial model there is almost perfect agreement, which we don't see for any other models.  And although the categorical multinomial model has more parameters at 16 the increased accuracy seems worth these extra parameters, so I would choose the categorical multinomial model.  There is a decent chance this model is over-fit, but without any test data I cannot for sure tell that.  I would recommend the high dosage as on the high dosage a patient has a slightly higher chance of death than medium dose but has a much better probability of a good outcome.  The high dose also gives the patient the smallest risk of a vegetative state outcome.
